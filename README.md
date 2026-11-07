@@ -54,7 +54,7 @@ Furthermore:
 go get github.com/chadweimer/fts5query
 ```
 
-Requires Go 1.22 or higher.
+Requires Go 1.26 or higher.
 
 ---
 
