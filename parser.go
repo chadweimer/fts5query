@@ -126,7 +126,7 @@ func formatToken(tok rawToken, cfg config) string {
 func cleanPhrase(phrase string) string {
 	clean := strings.Map(func(r rune) rune {
 		switch r {
-		case '"', ':', '*', '^', '{', '}', '(', ')':
+		case 0, '"', ':', '*', '^', '{', '}', '(', ')':
 			return ' '
 		default:
 			return r
@@ -142,7 +142,7 @@ func cleanPhrase(phrase string) string {
 func cleanTerm(term string) string {
 	clean := strings.Map(func(r rune) rune {
 		switch r {
-		case '"', ':', '*', '^', '{', '}', '(', ')', '~', '+', '&', '|':
+		case 0, '"', ':', '*', '^', '{', '}', '(', ')', '~', '+', '&', '|':
 			return -1
 		default:
 			return r

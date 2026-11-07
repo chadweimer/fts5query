@@ -23,6 +23,7 @@ fts5: syntax error near "AND" -- e.g. from "mac AND cheese"
 ```
 
 Furthermore:
+
 - In SQLite FTS5 grammar, column filters (`{col1 col2} : ...`) bind **only to the first token** unless parenthesized: `{title} : apple pie` parses as `({title} : apple) AND (ALL_COLUMNS : pie)`.
 - FTS5 boolean `NOT` binds tighter than `OR`: `apple OR banana NOT walnuts` parses as `apple OR (banana NOT walnuts)`.
 - FTS5 has no unary `NOT <word>` operator. Searching exclusively for `-walnuts` fails in FTS5 unless inverted at the SQL level.
@@ -54,7 +55,7 @@ Furthermore:
 go get github.com/chadweimer/fts5query
 ```
 
-Requires Go 1.22 or higher.
+Requires Go 1.26 or higher.
 
 ---
 
@@ -66,46 +67,46 @@ Requires Go 1.22 or higher.
 package main
 
 import (
-	"database/sql"
-	"fmt"
-	"log"
+ "database/sql"
+ "fmt"
+ "log"
 
-	"github.com/chadweimer/fts5query"
-	_ "modernc.org/sqlite" // or github.com/mattn/go-sqlite3
+ "github.com/chadweimer/fts5query"
+ _ "modernc.org/sqlite" // or github.com/mattn/go-sqlite3
 )
 
 func main() {
-	db, err := sql.Open("sqlite", "recipes.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+ db, err := sql.Open("sqlite", "recipes.db")
+ if err != nil {
+  log.Fatal(err)
+ }
+ defer db.Close()
 
-	// Parse user input from a search box
-	userInput := `"chocolate chip" -nuts 3/4 cup! OR oatmeal`
-	res := fts5query.Parse(userInput, fts5query.WithColumns("name", "ingredients"))
+ // Parse user input from a search box
+ userInput := `"chocolate chip" -nuts 3/4 cup! OR oatmeal`
+ res := fts5query.Parse(userInput, fts5query.WithColumns("name", "ingredients"))
 
-	if res.IsEmpty() {
-		fmt.Println("No searchable terms entered.")
-		return
-	}
+ if res.IsEmpty() {
+  fmt.Println("No searchable terms entered.")
+  return
+ }
 
-	fmt.Println("FTS5 MATCH Expression:", res.MatchExpr)
-	// Output: {name ingredients} : ((("chocolate chip" ("3/4"* "cup"*) OR "oatmeal"*) NOT "nuts"*))
+ fmt.Println("FTS5 MATCH Expression:", res.MatchExpr)
+ // Output: {name ingredients} : ((("chocolate chip" ("3/4"* "cup"*) OR "oatmeal"*) NOT "nuts"*))
 
-	// Execute via parameterized query
-	rows, err := db.Query(`
-		SELECT rowid, name 
-		FROM recipe_fts 
-		WHERE recipe_fts MATCH ? 
-		ORDER BY rank
-	`, res.MatchExpr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
+ // Execute via parameterized query
+ rows, err := db.Query(`
+  SELECT rowid, name
+  FROM recipe_fts
+  WHERE recipe_fts MATCH ?
+  ORDER BY rank
+ `, res.MatchExpr)
+ if err != nil {
+  log.Fatal(err)
+ }
+ defer rows.Close()
 
-	// Process rows...
+ // Process rows...
 }
 ```
 

@@ -13,7 +13,7 @@ func FuzzParse(f *testing.F) {
 	if err != nil {
 		f.Fatalf("failed to open sqlite db: %v", err)
 	}
-	defer sqliteDB.Close()
+	defer func() { _ = sqliteDB.Close() }()
 
 	_, err = sqliteDB.Exec(`CREATE VIRTUAL TABLE fuzz_fts USING fts5(
 		title,
@@ -42,6 +42,9 @@ func FuzzParse(f *testing.F) {
 		"--- ---",
 		"こんにちは 世界",
 		"cafe\u0301 re\u0301sume\u0301",
+		"\"0\x00",
+		"0\x000",
+		"\x00",
 	}
 
 	for _, seed := range seeds {
@@ -59,7 +62,7 @@ func FuzzParse(f *testing.F) {
 			if err != nil {
 				t.Fatalf("generated invalid FTS5 syntax for input %q -> MatchExpr %q: %v", input, res.MatchExpr, err)
 			}
-			rows.Close()
+			_ = rows.Close()
 		}
 	})
 }

@@ -1,0 +1,10 @@
+{
+  "editor.formatOnSave": true,
+  "editor.renderWhitespace": "boundary",
+  "go.coverOnSave": true,
+  "go.coverageOptions": "showUncoveredCodeOnly",
+  "go.inlayHints.assignVariableTypes": true,
+  "go.inlayHints.functionTypeParameters": true,
+  "go.inlayHints.parameterNames": true,
+  "go.inlayHints.rangeVariableTypes": true,
+}
