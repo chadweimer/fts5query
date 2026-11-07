@@ -13,7 +13,7 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open in-memory sqlite db: %v", err)
 	}
-	defer sqliteDB.Close()
+	defer func() { _ = sqliteDB.Close() }()
 
 	_, err = sqliteDB.Exec(`CREATE VIRTUAL TABLE test_fts USING fts5(
 		name,
@@ -177,7 +177,7 @@ func TestParse(t *testing.T) {
 				if err != nil {
 					t.Errorf("FTS5 syntax error for MatchExpr %q: %v", res.MatchExpr, err)
 				} else {
-					rows.Close()
+					_ = rows.Close()
 				}
 			}
 		})
