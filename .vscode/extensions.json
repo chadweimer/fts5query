@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "davidanson.vscode-markdownlint",
+    "editorconfig.editorconfig",
+    "GitHub.vscode-github-actions",
+    "GitHub.vscode-pull-request-github",
+    "ms-vscode-remote.remote-containers",
+    "sonarsource.sonarlint-vscode",
+  ]
+}
