@@ -42,6 +42,9 @@ func FuzzParse(f *testing.F) {
 		"--- ---",
 		"こんにちは 世界",
 		"cafe\u0301 re\u0301sume\u0301",
+		"\"0\x00",
+		"0\x000",
+		"\x00",
 	}
 
 	for _, seed := range seeds {

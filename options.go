@@ -1,5 +1,7 @@
 package fts5query
 
+import "strings"
+
 type config struct {
 	columns        []string
 	prefixMatch    bool
@@ -25,6 +27,7 @@ func WithColumns(columns ...string) Option {
 	return func(c *config) {
 		cols := make([]string, 0, len(columns))
 		for _, col := range columns {
+			col = strings.TrimSpace(strings.ReplaceAll(col, "\x00", ""))
 			if col != "" {
 				cols = append(cols, col)
 			}

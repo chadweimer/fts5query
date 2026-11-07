@@ -156,6 +156,27 @@ func TestParse(t *testing.T) {
 			opts:              []fts5query.Option{fts5query.WithMinTermLength(3)},
 			expectedMatchExpr: `("big"* "brown"* "fox"*)`,
 		},
+		{
+			name:              "null bytes in unclosed quote",
+			rawQuery:          "\"0\x00",
+			expectedMatchExpr: `("0")`,
+		},
+		{
+			name:              "null bytes within bare word",
+			rawQuery:          "0\x000",
+			expectedMatchExpr: `("0"* "0"*)`,
+		},
+		{
+			name:              "null bytes in column names and values",
+			rawQuery:          "\x00cookies\x00",
+			opts:              []fts5query.Option{fts5query.WithColumns("name\x00", "\x00")},
+			expectedMatchExpr: `{name} : ("cookies"*)`,
+		},
+		{
+			name:            "null bytes only",
+			rawQuery:        "\x00\x00",
+			expectedIsEmpty: true,
+		},
 	}
 
 	for _, tc := range tests {

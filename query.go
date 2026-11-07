@@ -62,7 +62,8 @@ func Parse(rawQuery string, opts ...Option) *Result {
 		opt(&cfg)
 	}
 
-	trimmed := strings.TrimSpace(rawQuery)
+	sanitized := strings.ReplaceAll(rawQuery, "\x00", " ")
+	trimmed := strings.TrimSpace(sanitized)
 	if trimmed == "" {
 		return &Result{Columns: cfg.columns}
 	}
