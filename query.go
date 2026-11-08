@@ -2,6 +2,7 @@ package fts5query
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -53,6 +54,61 @@ func (r *Result) SQLCondition(ftsTable, primaryKeyColumn string) (string, []any)
 	}
 	stmt := fmt.Sprintf("%s %s (SELECT rowid FROM %s WHERE %s MATCH ?)", primaryKeyColumn, op, ftsTable, ftsTable)
 	return stmt, []any{r.MatchExpr}
+}
+
+// SQLJoin generates a JOIN clause, WHERE clause fragment, and bind arguments for querying an FTS5 virtual table.
+//
+// For positive or mixed queries:
+//
+//	joinClause:  "JOIN <ftsTable> ON <ftsTable>.rowid = <primaryKeyColumn>"
+//	whereClause: "<ftsTable> MATCH ?"
+//	args:        []any{r.MatchExpr}
+//
+// For pure negation queries (e.g. "-nuts"), which cannot be executed with an FTS5 MATCH clause alone:
+//
+//	joinClause:  ""
+//	whereClause: "<primaryKeyColumn> NOT IN (SELECT rowid FROM <ftsTable> WHERE <ftsTable> MATCH ?)"
+//	args:        []any{r.MatchExpr}
+//
+// For empty queries:
+//
+//	joinClause:  ""
+//	whereClause: ""
+//	args:        nil
+func (r *Result) SQLJoin(ftsTable, primaryKeyColumn string) (string, string, []any) {
+	if r.IsEmpty() {
+		return "", "", nil
+	}
+	if r.IsPureNegation {
+		cond, args := r.SQLCondition(ftsTable, primaryKeyColumn)
+		return "", cond, args
+	}
+	join := fmt.Sprintf("JOIN %s ON %s.rowid = %s", ftsTable, ftsTable, primaryKeyColumn)
+	where := fmt.Sprintf("%s MATCH ?", ftsTable)
+	return join, where, []any{r.MatchExpr}
+}
+
+// BM25 returns an SQLite FTS5 `bm25(<ftsTable>, ...)` SQL expression for ranking search results by relevance.
+//
+// If optional weights are provided, they are formatted as comma-separated numeric arguments:
+//
+//	r.BM25("recipe_fts", 10.0, 4.0, 2.0, 1.0, 1.0)
+//	// Returns: "bm25(recipe_fts, 10, 4, 2, 1, 1)"
+//
+// If the result is empty or represents a pure negation query (which cannot be scored via BM25),
+// it returns an empty string.
+func (r *Result) BM25(ftsTable string, weights ...float64) string {
+	if r.IsEmpty() || r.IsPureNegation {
+		return ""
+	}
+	if len(weights) == 0 {
+		return fmt.Sprintf("bm25(%s)", ftsTable)
+	}
+	weightStrs := make([]string, len(weights))
+	for i, w := range weights {
+		weightStrs[i] = strconv.FormatFloat(w, 'f', -1, 64)
+	}
+	return fmt.Sprintf("bm25(%s, %s)", ftsTable, strings.Join(weightStrs, ", "))
 }
 
 // Parse transforms raw user-entered search text into a safe SQLite FTS5 query.
