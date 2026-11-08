@@ -45,6 +45,7 @@ Furthermore:
 - **Punctuation & Keyword Safety**: Words containing slashes (`3/4`), hyphens (`all-purpose`), contractions (`grandma's`), or uppercase keywords (`AND`, `NOT`) are safely quoted before wildcards (`"3/4"*`, `"all-purpose"*`) so SQLite's `unicode61` tokenizer splits them naturally.
 - **Column Scoping & Precedence**: Correctly parenthesizes column filters (`{col1 col2} : (...)`) and mixed boolean expressions (`((pos1 OR pos2) NOT neg)`).
 - **Pure Negation Handling**: Distinguishes pure-negation queries (e.g. `-nuts -dairy`) and provides SQL helpers to automatically emit `id NOT IN (SELECT rowid FROM fts WHERE fts MATCH ?)` with `OR`-joined exclusions.
+- **SQL JOIN & BM25 Relevance Helpers**: Automatically produces idiomatic SQLite `JOIN <ftsTable> ON ... WHERE <ftsTable> MATCH ?` clauses and `bm25(table, weights...)` expressions, while seamlessly handling pure-negation fallback.
 - **Fuzz Tested**: Verified with continuous Go fuzz testing against in-memory SQLite FTS5 tables to guarantee no user input can cause a syntax error.
 
 ---
@@ -110,9 +111,40 @@ func main() {
 }
 ```
 
-### Full SQL WHERE Condition Helper
+### SQL JOIN & Relevance Ranking Helper (Recommended)
 
-When queries can contain pure negations (e.g. user types only `-dairy -nuts`), FTS5 requires matching the excluded terms and inverting the SQL condition using `NOT IN`:
+Joining the FTS5 virtual table directly to your content table provides optimal query performance and allows ordering directly by SQLite's built-in `bm25(...)` ranking function:
+
+```go
+res := fts5query.Parse(userInput, fts5query.WithColumns("name", "ingredients"))
+
+// Generates the JOIN clause, WHERE clause, and bind arguments:
+joinClause, whereClause, args := res.SQLJoin("recipe_fts", "r.id")
+// For "cookies":
+//   joinClause:  "JOIN recipe_fts ON recipe_fts.rowid = r.id"
+//   whereClause: "recipe_fts MATCH ?"
+//   args:        []any{`{name ingredients} : ("cookies"*)`}
+//
+// For "-nuts" (pure negation):
+//   joinClause:  ""
+//   whereClause: "r.id NOT IN (SELECT rowid FROM recipe_fts WHERE recipe_fts MATCH ?)"
+//   args:        []any{`{name ingredients} : ("nuts"*)`}
+
+// Generate BM25 ranking expression with optional column weights:
+bm25Expr := res.BM25("recipe_fts", 10.0, 4.0) // Returns "" if query is empty or pure negation
+
+orderClause := "ORDER BY r.modified_at DESC"
+if bm25Expr != "" {
+    orderClause = fmt.Sprintf("ORDER BY %s ASC, r.modified_at DESC", bm25Expr)
+}
+
+query := fmt.Sprintf("SELECT r.id, r.name FROM recipe AS r %s WHERE %s %s", joinClause, whereClause, orderClause)
+rows, err := db.Query(query, args...)
+```
+
+### Self-Contained Subquery Condition Helper
+
+Alternatively, if you cannot modify your query's `FROM` clause to add a `JOIN`, `SQLCondition` generates a self-contained `IN` or `NOT IN` subquery condition:
 
 ```go
 res := fts5query.Parse(userInput, fts5query.WithColumns("name", "ingredients"))
