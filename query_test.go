@@ -277,7 +277,7 @@ func TestSQLJoin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query execution failed: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var matchedIDs []int
 	for rows.Next() {
 		var id int
@@ -311,7 +311,7 @@ func TestSQLJoin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("negation query execution failed: %v", err)
 	}
-	defer rowsNeg.Close()
+	defer func() { _ = rowsNeg.Close() }()
 	var matchedNegIDs []int
 	for rowsNeg.Next() {
 		var id int
